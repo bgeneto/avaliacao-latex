@@ -1,0 +1,37 @@
+---
+description: Write and edit class/exam code only with modern 2020+ LaTeX; no legacy TeX/LaTeX2e internals in new features.
+globs: "**/*.{tex,cls,sty}"
+alwaysApply: true
+---
+
+# Modern LaTeX only (2020+)
+
+This project is LuaLaTeX with kernel **2022/06+**. Edits and new features must use **modern LaTeX syntax**. Do not add old, legacy, or plain-TeX code.
+
+## Required for new / touched code
+
+- Commands/envs: `\NewDocumentCommand`, `\RenewDocumentCommand`, `\NewDocumentEnvironment` (kernel `ltcmd`). Do **not** `\RequirePackage{xparse}`.
+- Logic and data: `expl3` (`\ExplSyntaxOn` … `\ExplSyntaxOff`): `tl`, `seq`, `bool`, `int`, `\cs_new_protected:Npn`, `\keys_define:nn`.
+- Class/package options: `\DeclareKeys` + `\ProcessKeyOptions` (already used). No `\DeclareOption` / `\ProcessOptions`.
+- Optional/starred args: `o` / `O{}` / `s` in the argument spec. No `\@ifnextchar` / `\@ifstar`.
+- Booleans: `\bool_new:N` + `\bool_if:NTF`. No new `\newif`.
+- Internals: `\cs_new:Npn` / `\cs_set_eq:NN`. No `\def`, `\edef`, `\gdef`, `\xdef`, `\let`.
+- Engine/fonts: LuaLaTeX, `fontspec`, `unicode-math`, `polyglossia`. No `inputenc`, `fontenc`, pdfLaTeX/XeLaTeX fallbacks.
+
+## Forbidden in new code
+
+Plain TeX conditionals and loops (`\if`, `\ifx`, `\ifnum`, `\ifdim`, `\loop`/`\repeat`), `\expandafter`/`\noexpand` chains, `\csname`…`\endcsname`, `\catcode` hacks, `\makeatletter` + `@`-name programming that `expl3` already covers, `etoolbox` for logic `expl3` can do.
+
+```tex
+% BAD
+\def\foo#1{\@ifnextchar[{\foo@opt{#1}}{\foo@no{#1}}}
+\newif\if@flag
+\ifnum\value{page}>1 \relax\fi
+
+% GOOD
+\NewDocumentCommand{\foo}{m o}{ \IfNoValueTF{#2}{...}{...} }
+\bool_new:N \l_avaliacao_flag_bool
+\int_compare:nNnTF { \value{page} } > { 1 } { } { }
+```
+
+When you must edit an existing legacy region (`\newif`, `\newcommand`, aux `\write`, …), rewrite that region in 2020+ style instead of extending it. Keep the public API (PT/EN command names) unchanged.

@@ -1,6 +1,6 @@
 \NeedsTeXFormat{LaTeX2e}[2022/06/01]
 \ProvidesClass{avaliacao}[2026/08/15 v1.11 Avaliacao class for LuaLaTeX
-^^JCreated by Bernhard Enders]
+^^JCreated by bgeneto]
 
 % -----------------------------------------------------
 % Engine and options (kernel key=value, 2022+)

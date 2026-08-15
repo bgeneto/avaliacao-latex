@@ -15,6 +15,26 @@ This repository is a **LuaLaTeX** document class for printed exams (`avaliacao.c
 | `avaliacao.cls` | Class implementation. Keep the public API stable. |
 | `exemplo.tex` | Canonical usage example. Mirror its patterns in new exams. |
 
+## LaTeX syntax contract (2020+)
+
+When editing the class or adding features, write **modern LaTeX only** (kernel 2020/10 or later; this class already requires 2022/06). Do not introduce old, legacy, or plain-TeX idioms in new or touched code.
+
+**Prefer (required for new code):**
+- `\NewDocumentCommand` / `\NewDocumentEnvironment` (kernel `ltcmd`; do not load `xparse`)
+- `expl3` (`\ExplSyntaxOn`) for logic, data, string/seq/tl/bool work
+- Kernel key=value: `\DeclareKeys`, `\ProcessKeyOptions`, `\keys_define:nn`
+- `\NewDocumentCommand` argument specifiers (`o`, `O{}`, `m`, `+m`, `s`, …) instead of `\@ifnextchar` / `\@ifstar`
+- `\bool_new:N` / `\bool_if:NTF` instead of `\newif`
+- `\cs_new_protected:Npn` / `\cs_set:Npn` instead of `\def`/`\edef`/`\gdef`/`\let` for internals
+- LuaLaTeX + Unicode (`fontspec`, `unicode-math`, `polyglossia`); no 8-bit encodings
+
+**Do not add:**
+- Plain TeX: `\def`, `\edef`, `\xdef`, `\let`, `\expandafter`, `\noexpand`, `\loop`/`\repeat`, `\if`/`\ifx`/`\ifnum`/`\ifdim` trees, `\csname`, `\catcode` hacks
+- Legacy LaTeX2e internals: `\newcommand` with `@ifnextchar`, `\DeclareOption`/`\ProcessOptions`, `\@namedef`, `\makeatletter` patterns that `expl3` already covers
+- Obsolete packages/engines: `inputenc`, `fontenc`, `babel` (use `polyglossia`), pdfLaTeX/XeLaTeX shims, `xparse` as a package, `etoolbox` for new logic if `expl3` suffices
+
+When changing existing legacy snippets (`\newif`, `\newcommand`, `\immediate\write`, …), **modernize that region** rather than copying the old style. Public command names stay stable.
+
 ## When editing the class
 
 - Preserve Portuguese as the document language (`polyglossia`).
