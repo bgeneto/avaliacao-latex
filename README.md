@@ -52,11 +52,54 @@ Coloque `avaliacao.cls` (e o logo, se usar um arquivo próprio) no mesmo diretó
 | `keys` | Imprime o gabarito *na prova* |
 | `gabarito` (ou `answerkey`) | Folha de gabarito ao final (página extra; fora da numeração da prova) |
 | `10pt`, `11pt`, `12pt` | Tamanho da fonte |
+| `font={…}` | Substitui a fonte do texto (padrão: Linux Libertine) |
+| `sansfont={…}` | Substitui a fonte sem serifa (cabeçalho) |
+| `mathfont={…}` | Substitui a fonte matemática (`unicode-math`) |
 | demais | Encaminhadas ao `geometry` (`a4paper`, `margin=...`, etc.) |
 
 `keys` e `gabarito` são independentes: use uma, a outra, as duas (prova do professor) ou nenhuma (prova do aluno).
 
 Logo padrão: `logo_unb_vert` (arquivo de imagem no caminho de busca). Redefina com `\logo{arquivo}`.
+
+## Fontes
+
+A classe carrega **Linux Libertine** por padrão. Para usar outra fonte OpenType do TeX Live ou do sistema, chame `\fonte` (ou `\examfont`) **depois** de `\documentclass`, ou passe a opção `font`:
+
+```tex
+\documentclass[12pt,a4paper]{avaliacao}
+
+% Palatino (clone no TeX Live):
+\fonte{TeX Gyre Pagella}
+
+% Mesma família também no cabeçalho (\sffamily):
+% \fonte*{TeX Gyre Pagella}
+
+% Fonte instalada no sistema (nome que o LuaLaTeX reconhece):
+% \fonte{Palatino Linotype}
+
+% Arquivo OTF (caminho ou nome do ficheiro no path de fontes):
+% \fonte{texgyrepagella-regular.otf}
+
+% Opções do fontspec (escala, negrito, etc.):
+% \fonte[Scale=0.95]{TeX Gyre Pagella}
+
+% Fórmulas alinhadas à Pagella:
+% \setmathfont{TeX Gyre Pagella Math}
+
+\begin{document}
+...
+\end{document}
+```
+
+Equivalente na opção da classe (chaves com espaços entre `{…}`):
+
+```tex
+\documentclass[12pt,a4paper,font={TeX Gyre Pagella}]{avaliacao}
+```
+
+O cabeçalho institucional usa `\sffamily` (Biolinum, enquanto o padrão Libertine estiver ativo). `\fonte{…}` troca só o texto da prova; `\fonte*{…}` (ou `sansfont={…}`) troca também o cabeçalho.
+
+Para listar nomes que o LuaLaTeX encontra: `luaotfload-tool --find="Palatino"` ou `fc-list : family | sort`.
 
 ## Gabarito
 
@@ -97,6 +140,7 @@ Se a questão tem `\qitem`, **não** use o argumento opcional de `questao` (`[4/
 - `obs` — texto compartilhado entre questões
 - `\valor{80}{km/h}`, `\unidade{m/s}` — grandezas com unidade em romano
 - `\href{url}` ou `\href{url}{texto}`, `\url{url}` — links (a classe carrega `hyperref`)
+- `\fonte{Nome}` / `\examfont{Nome}` — troca a fonte do texto; `\fonte*` também a sem serifa
 
 Há aliases em português e inglês para o cabeçalho (`\universidade`/`\university`, `\disciplina`/`\course`, …).
 

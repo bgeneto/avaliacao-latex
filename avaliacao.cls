@@ -1,38 +1,48 @@
 \NeedsTeXFormat{LaTeX2e}[2022/06/01]
-\ProvidesClass{avaliacao}[2026/08/15 v1.11 Avaliacao class for LuaLaTeX
+\ProvidesClass{avaliacao}[2026/08/15 v1.13 Avaliacao class for LuaLaTeX
 ^^JCreated by bgeneto]
 
 % -----------------------------------------------------
-% Engine and options (kernel key=value, 2022+)
+% Engine and options (kernel key=value + expl3, 2022+)
 % -----------------------------------------------------
-\RequirePackage{iftex}
-\ifluatex\else
-  \ClassError{avaliacao}{This class requires LuaLaTeX}{Compile with lualatex.}
-\fi
+\ExplSyntaxOn
+\sys_if_engine_luatex:F
+  {
+    \ClassError { avaliacao }
+      { This~class~requires~LuaLaTeX }
+      { Compile~with~lualatex. }
+  }
 
-\newif\ifavaliacao@twocols
-\newif\ifavaliacao@keys
-\newif\ifavaliacao@gabarito
-\newif\ifavaliacao@colsstarted
-\newif\ifavaliacao@suspended
-\newif\ifavaliacao@inchoices
+\bool_new:N \g_avaliacao_twocols_bool
+\bool_new:N \g_avaliacao_keys_bool
+\bool_new:N \g_avaliacao_gabarito_bool
+\bool_new:N \g_avaliacao_colsstarted_bool
+\bool_new:N \g_avaliacao_suspended_bool
+\bool_new:N \g_avaliacao_inchoices_bool
+\tl_new:N \g_avaliacao_font_tl
+\tl_new:N \g_avaliacao_sansfont_tl
+\tl_new:N \g_avaliacao_mathfont_tl
 
-\DeclareKeys[avaliacao]{
-  twocols    .code = \avaliacao@twocolstrue,
-  keys       .code = \avaliacao@keystrue,
-  gabarito   .code = \avaliacao@gabaritotrue,
-  answerkey  .code = \avaliacao@gabaritotrue,
-  10pt    .code = \PassOptionsToClass{10pt}{article},
-  11pt    .code = \PassOptionsToClass{11pt}{article},
-  12pt    .code = \PassOptionsToClass{12pt}{article},
-}
-\DeclareUnknownKeyHandler[avaliacao]{%
-  \if\relax\detokenize{#2}\relax
-    \PassOptionsToPackage{#1}{geometry}%
-  \else
-    \PassOptionsToPackage{#1=#2}{geometry}%
-  \fi
-}
+\DeclareKeys [ avaliacao ]
+  {
+    twocols    .code = \bool_gset_true:N \g_avaliacao_twocols_bool ,
+    keys       .code = \bool_gset_true:N \g_avaliacao_keys_bool ,
+    gabarito   .code = \bool_gset_true:N \g_avaliacao_gabarito_bool ,
+    answerkey  .code = \bool_gset_true:N \g_avaliacao_gabarito_bool ,
+    font       .tl_gset:N = \g_avaliacao_font_tl ,
+    sansfont   .tl_gset:N = \g_avaliacao_sansfont_tl ,
+    mathfont   .tl_gset:N = \g_avaliacao_mathfont_tl ,
+    10pt       .code = \PassOptionsToClass { 10pt } { article } ,
+    11pt       .code = \PassOptionsToClass { 11pt } { article } ,
+    12pt       .code = \PassOptionsToClass { 12pt } { article } ,
+  }
+\DeclareUnknownKeyHandler [ avaliacao ]
+  {
+    \IfBlankTF {#2}
+      { \PassOptionsToPackage {#1} { geometry } }
+      { \PassOptionsToPackage {#1=#2} { geometry } }
+  }
+\ExplSyntaxOff
 \PassOptionsToPackage{includefoot}{geometry}
 \ProcessKeyOptions[avaliacao]
 \LoadClass{article}
@@ -63,6 +73,25 @@
 \RequirePackage{microtype}
 \RequirePackage{libertine}
 
+% Default: Linux Libertine. Optional class keys / \fonte overwrite after this.
+\ExplSyntaxOn
+\tl_if_empty:NF \g_avaliacao_font_tl
+  { \exp_args:NV \setmainfont \g_avaliacao_font_tl }
+\tl_if_empty:NF \g_avaliacao_sansfont_tl
+  { \exp_args:NV \setsansfont \g_avaliacao_sansfont_tl }
+\tl_if_empty:NF \g_avaliacao_mathfont_tl
+  { \exp_args:NV \setmathfont \g_avaliacao_mathfont_tl }
+\ExplSyntaxOff
+
+\NewDocumentCommand{\fonte}{s O{} m}{%
+  \setmainfont[#2]{#3}%
+  \IfBooleanT{#1}{\setsansfont[#2]{#3}}%
+}
+\NewCommandCopy{\examfont}{\fonte}
+
+% Exam page count before an appended gabarito sheet (kernel properties)
+\NewProperty{avaliacao/exampages}{now}{??}{\thepage}
+
 % -----------------------------------------------------
 % Page chrome
 % -----------------------------------------------------
@@ -70,12 +99,24 @@
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 \fancyhf{}
-\ifavaliacao@gabarito
-  \newcommand{\avaliacao@lastn}{??}
-  \fancyfoot[R]{\itshape\scriptsize página \thepage\ de \avaliacao@lastn}
-\else
-  \fancyfoot[R]{\itshape\scriptsize página \thepage\ de \pageref{LastPage}}
-\fi
+\ExplSyntaxOn
+\bool_if:NTF \g_avaliacao_gabarito_bool
+  {
+    \fancyfoot [ R ]
+      {
+        \itshape \scriptsize
+        página~ \thepage \ de~
+        \RefProperty { avaliacao@examend } { avaliacao/exampages }
+      }
+  }
+  {
+    \fancyfoot [ R ]
+      {
+        \itshape \scriptsize
+        página~ \thepage \ de~ \pageref { LastPage }
+      }
+  }
+\ExplSyntaxOff
 \fancypagestyle{avaliacao@gabarito}{%
   \fancyhf{}%
   \fancyfoot[C]{\itshape\scriptsize gabarito}%
@@ -94,35 +135,80 @@
 \AddToHook{begindocument}{\RequirePackage{ziffer}}
 
 % \i/\j in math → ı/ȷ (unicode-math); text \i/\j unchanged
+\ExplSyntaxOn
+\cs_new_protected:Npn \avaliacao@dotlessi
+  { \mode_if_math:TF { \imath } { \avaliacao@i } }
+\cs_new_protected:Npn \avaliacao@dotlessj
+  { \mode_if_math:TF { \jmath } { \avaliacao@j } }
+\ExplSyntaxOff
 \AddToHook{begindocument}{%
   \NewCommandCopy\avaliacao@i\i
   \NewCommandCopy\avaliacao@j\j
-  \DeclareRobustCommand{\i}{\ifmmode\imath\else\avaliacao@i\fi}%
-  \DeclareRobustCommand{\j}{\ifmmode\jmath\else\avaliacao@j\fi}%
+  \RenewDocumentCommand{\i}{}{\avaliacao@dotlessi}%
+  \RenewDocumentCommand{\j}{}{\avaliacao@dotlessj}%
 }
 
 % -----------------------------------------------------
 % Header metadata (PT/EN aliases)
 % -----------------------------------------------------
-\newcommand*{\avaliacao@logo}{logo_unb_vert}
-\newcommand*{\avaliacao@univ}{\ClassError{avaliacao}{No \protect\university\space defined}{}}
-\newcommand*{\avaliacao@facul}{\ClassError{avaliacao}{No \protect\faculty\space defined}{}}
-\newcommand*{\avaliacao@major}{Ciências Naturais}
-\newcommand*{\avaliacao@course}{\ClassError{avaliacao}{No \protect\course\space defined}{}}
-\newcommand*{\avaliacao@semester}{\ClassError{avaliacao}{No \protect\semester\space defined}{}}
-\newcommand*{\avaliacao@subject}{\ClassError{avaliacao}{No \protect\subject\space defined}{}}
-\newcommand*{\avaliacao@shift}{\ClassError{avaliacao}{No \protect\shift\space defined}{}}
-\newcommand*{\avaliacao@prof}{\ClassError{avaliacao}{No \protect\professor\space defined}{}}
+\ExplSyntaxOn
+\tl_new:N \g_avaliacao_logo_tl
+\tl_new:N \g_avaliacao_univ_tl
+\tl_new:N \g_avaliacao_facul_tl
+\tl_new:N \g_avaliacao_major_tl
+\tl_new:N \g_avaliacao_course_tl
+\tl_new:N \g_avaliacao_semester_tl
+\tl_new:N \g_avaliacao_subject_tl
+\tl_new:N \g_avaliacao_shift_tl
+\tl_new:N \g_avaliacao_prof_tl
 
-\NewDocumentCommand{\logo}{m}{\gdef\avaliacao@logo{#1}}
-\NewDocumentCommand{\university}{m}{\gdef\avaliacao@univ{#1}}
-\NewDocumentCommand{\faculty}{m}{\gdef\avaliacao@facul{#1}}
-\NewDocumentCommand{\major}{m}{\gdef\avaliacao@major{#1}}
-\NewDocumentCommand{\course}{m}{\gdef\avaliacao@course{#1}}
-\NewDocumentCommand{\semester}{m}{\gdef\avaliacao@semester{#1}}
-\NewDocumentCommand{\subject}{m}{\gdef\avaliacao@subject{#1}}
-\NewDocumentCommand{\shift}{m}{\gdef\avaliacao@shift{#1}}
-\NewDocumentCommand{\professor}{m}{\gdef\avaliacao@prof{#1}}
+\tl_gset:Nn \g_avaliacao_logo_tl { logo_unb_vert }
+\tl_gset:Nn \g_avaliacao_major_tl { Ciências~Naturais }
+\tl_gset:Nn \g_avaliacao_univ_tl
+  { \ClassError { avaliacao } { No~\protect\university\space defined } { } }
+\tl_gset:Nn \g_avaliacao_facul_tl
+  { \ClassError { avaliacao } { No~\protect\faculty\space defined } { } }
+\tl_gset:Nn \g_avaliacao_course_tl
+  { \ClassError { avaliacao } { No~\protect\course\space defined } { } }
+\tl_gset:Nn \g_avaliacao_semester_tl
+  { \ClassError { avaliacao } { No~\protect\semester\space defined } { } }
+\tl_gset:Nn \g_avaliacao_subject_tl
+  { \ClassError { avaliacao } { No~\protect\subject\space defined } { } }
+\tl_gset:Nn \g_avaliacao_shift_tl
+  { \ClassError { avaliacao } { No~\protect\shift\space defined } { } }
+\tl_gset:Nn \g_avaliacao_prof_tl
+  { \ClassError { avaliacao } { No~\protect\professor\space defined } { } }
+
+% Expandable from document-level (catcodes frozen here)
+\cs_new:Npn \avaliacao@logo { \g_avaliacao_logo_tl }
+\cs_new:Npn \avaliacao@univ { \g_avaliacao_univ_tl }
+\cs_new:Npn \avaliacao@facul { \g_avaliacao_facul_tl }
+\cs_new:Npn \avaliacao@major { \g_avaliacao_major_tl }
+\cs_new:Npn \avaliacao@course { \g_avaliacao_course_tl }
+\cs_new:Npn \avaliacao@semester { \g_avaliacao_semester_tl }
+\cs_new:Npn \avaliacao@subject { \g_avaliacao_subject_tl }
+\cs_new:Npn \avaliacao@shift { \g_avaliacao_shift_tl }
+\cs_new:Npn \avaliacao@prof { \g_avaliacao_prof_tl }
+
+\NewDocumentCommand { \logo } { m }
+  { \tl_gset:Nn \g_avaliacao_logo_tl {#1} }
+\NewDocumentCommand { \university } { m }
+  { \tl_gset:Nn \g_avaliacao_univ_tl {#1} }
+\NewDocumentCommand { \faculty } { m }
+  { \tl_gset:Nn \g_avaliacao_facul_tl {#1} }
+\NewDocumentCommand { \major } { m }
+  { \tl_gset:Nn \g_avaliacao_major_tl {#1} }
+\NewDocumentCommand { \course } { m }
+  { \tl_gset:Nn \g_avaliacao_course_tl {#1} }
+\NewDocumentCommand { \semester } { m }
+  { \tl_gset:Nn \g_avaliacao_semester_tl {#1} }
+\NewDocumentCommand { \subject } { m }
+  { \tl_gset:Nn \g_avaliacao_subject_tl {#1} }
+\NewDocumentCommand { \shift } { m }
+  { \tl_gset:Nn \g_avaliacao_shift_tl {#1} }
+\NewDocumentCommand { \professor } { m }
+  { \tl_gset:Nn \g_avaliacao_prof_tl {#1} }
+\ExplSyntaxOff
 
 \NewCommandCopy{\college}{\university}
 \NewCommandCopy{\universidade}{\university}
@@ -142,40 +228,49 @@
 % -----------------------------------------------------
 % Two-column body: start at first question/obs, not in \header
 % -----------------------------------------------------
-\newcommand{\avaliacao@ensurecols}{%
-  \ifavaliacao@twocols
-    \ifavaliacao@colsstarted
-    \else
-      \global\avaliacao@colsstartedtrue
-      \begin{multicols*}{2}%
-    \fi
-  \fi
-}
-\newcommand{\avaliacao@endcols}{%
-  \ifavaliacao@colsstarted
-    \global\avaliacao@colsstartedfalse
-    \end{multicols*}%
-  \fi
-}
+\ExplSyntaxOn
+\cs_new_protected:Npn \avaliacao@ensurecols
+  {
+    \bool_if:NT \g_avaliacao_twocols_bool
+      {
+        \bool_if:NF \g_avaliacao_colsstarted_bool
+          {
+            \bool_gset_true:N \g_avaliacao_colsstarted_bool
+            \begin { multicols* } { 2 }
+          }
+      }
+  }
+\cs_new_protected:Npn \avaliacao@endcols
+  {
+    \bool_if:NT \g_avaliacao_colsstarted_bool
+      {
+        \bool_gset_false:N \g_avaliacao_colsstarted_bool
+        \end { multicols* }
+      }
+  }
+\cs_new_protected:Npn \avaliacao@instrucoesbefore
+  {
+    \bool_gset_false:N \g_avaliacao_suspended_bool
+    \bool_if:NT \g_avaliacao_twocols_bool
+      {
+        \bool_if:NT \g_avaliacao_colsstarted_bool
+          {
+            \bool_gset_true:N \g_avaliacao_suspended_bool
+            \avaliacao@endcols
+          }
+      }
+  }
+\cs_new_protected:Npn \avaliacao@instrucoesafter
+  {
+    \bool_if:NT \g_avaliacao_suspended_bool
+      { \avaliacao@ensurecols }
+  }
+\ExplSyntaxOff
 \AddToHook{enddocument}{\avaliacao@endmatter}
 \AddToHook{env/questao/before}{\avaliacao@ensurecols}
 \AddToHook{env/obs/before}{\avaliacao@ensurecols}
-
-% Full-width instructions even if columns already started
-\AddToHook{env/instrucoes/before}{%
-  \global\avaliacao@suspendedfalse
-  \ifavaliacao@twocols
-    \ifavaliacao@colsstarted
-      \global\avaliacao@suspendedtrue
-      \avaliacao@endcols
-    \fi
-  \fi
-}
-\AddToHook{env/instrucoes/after}{%
-  \ifavaliacao@suspended
-    \avaliacao@ensurecols
-  \fi
-}
+\AddToHook{env/instrucoes/before}{\avaliacao@instrucoesbefore}
+\AddToHook{env/instrucoes/after}{\avaliacao@instrucoesafter}
 
 % -----------------------------------------------------
 % Institutional header (full width; does not start columns)
@@ -217,37 +312,38 @@
     \tl_replace_all:Nnn \l_tmpa_tl { , } { . }
     \fp_compare:nTF { \l_tmpa_tl < 2 } { ponto } { pontos }
   }
-\NewDocumentCommand { \avaliacao@points } { m }
+\cs_new_protected:Npn \avaliacao@points #1
   {
-    \tl_if_eq:nnF {#1} {0}
+    \tl_if_eq:nnF {#1} { 0 }
       { \textit { #1 ~ \avaliacao@ptslabel {#1} } }
   }
+\cs_new_protected:Npn \avaliacao@keybox #1
+  {
+    \bool_if:NT \g_avaliacao_keys_bool
+      {
+        \tl_if_blank:nF {#1}
+          { \fbox {#1} \quad }
+      }
+  }
+\cs_new_protected:Npn \avaliacao@qhead #1#2
+  {
+    \refstepcounter { questao }
+    \par \nobreak
+    \noindent
+    \begin { tabular* } { \linewidth }
+      {
+        | > { \centering \arraybackslash } p { 6.2em } |
+        @ { \extracolsep { \fill } } r
+      }
+      \hhline { - }
+      \cellcolor { mygray } \rule { 0pt } { 2.6ex } Questão~ \thequestao &
+      \avaliacao@keybox {#1} \avaliacao@points {#2} \rule [ -1.2ex ] { 0pt } { 0pt } \\
+      \hline
+    \end { tabular* } \par \nobreak
+    \vspace { 2 \lineskip }
+    \nobreak
+  }
 \ExplSyntaxOff
-
-\newcommand{\avaliacao@qhead}[2]{%
-  \refstepcounter{questao}%
-  \par\nobreak
-  \noindent
-  \begin{tabular*}{\linewidth}{%
-      |>{\centering\arraybackslash}p{6.2em}|
-      @{\extracolsep{\fill}}r}%
-    \hhline{-}%
-    \cellcolor{mygray}\rule{0pt}{2.6ex}Questão~\thequestao &
-    \avaliacao@keybox{#1}\avaliacao@points{#2}\rule[-1.2ex]{0pt}{0pt}\\
-    \hline
-  \end{tabular*}\par\nobreak
-  \vspace{2\lineskip}%
-  \nobreak
-}
-
-\newcommand{\avaliacao@keybox}[1]{%
-  \ifavaliacao@keys
-    \if\relax\detokenize{#1}\relax
-    \else
-      \fbox{#1}\quad
-    \fi
-  \fi
-}
 
 \NewDocumentEnvironment{questao}{O{} m}{%
   \avaliacao@questao@ini{#1}%
@@ -272,7 +368,7 @@
     before upper={\sloppy},
   ]
   {\centering\bfseries INSTRUÇÕES\par}
-  \begin{itemize}[leftmargin=*]
+  \begin{itemize}[leftmargin=*,label={{\libertine ✔}}]
 }{%
   \end{itemize}%
   \end{tcolorbox}%
@@ -313,45 +409,58 @@
 \newlength{\avaliacao@qitemwd}
 \AddToHook{begindocument}{\settowidth{\avaliacao@qitemwd}{($\quad$)}}
 
-\NewDocumentCommand{\qitem}{m}{%
-  \item
-  \avaliacao@recordqitem{#1}%
-  \ifavaliacao@keys
-    \ifavaliacao@inchoices
-      \hspace{-0.95\avaliacao@qitemwd}%
-      \makebox[0pt][l]{#1}%
-      \hspace{0.95\avaliacao@qitemwd}%
-    \else
-      \if\relax\detokenize{#1}\relax
-      \else
-        \mbox{\fbox{\strut#1}}\enspace
-      \fi
-    \fi
-  \fi
-}
+\ExplSyntaxOn
+\NewDocumentCommand { \qitem } { m }
+  {
+    \item
+    \avaliacao@recordqitem {#1}
+    \bool_if:NT \g_avaliacao_keys_bool
+      {
+        \bool_if:NTF \g_avaliacao_inchoices_bool
+          {
+            \hspace { -0.95 \avaliacao@qitemwd }
+            \makebox [ 0pt ] [ l ] {#1}
+            \hspace { 0.95 \avaliacao@qitemwd }
+          }
+          {
+            \tl_if_blank:nF {#1}
+              { \mbox { \fbox { \strut #1 } } \enspace }
+          }
+      }
+  }
 
-\NewDocumentEnvironment{vf}{}{%
-  \avaliacao@inchoicestrue
-  \begin{avaliacao@choices}%
-}{%
-  \end{avaliacao@choices}%
-  \avaliacao@inchoicesfalse
-}
+\NewDocumentEnvironment { vf } { }
+  {
+    \bool_gset_true:N \g_avaliacao_inchoices_bool
+    \begin { avaliacao@choices }
+  }
+  {
+    \end { avaliacao@choices }
+    \bool_gset_false:N \g_avaliacao_inchoices_bool
+  }
+
+\cs_new_protected:Npn \avaliacao@mebegin #1
+  {
+    \bool_gset_true:N \g_avaliacao_inchoices_bool
+    \setlength { \columnseprule } { 0pt }
+    \setlength { \multicolsep } { 0pt }
+    \int_compare:nNnT {#1} > { 1 }
+      { \begin { multicols } {#1} }
+    \begin { avaliacao@choices }
+  }
+\cs_new_protected:Npn \avaliacao@meend #1
+  {
+    \end { avaliacao@choices }
+    \int_compare:nNnT {#1} > { 1 }
+      { \end { multicols } }
+    \bool_gset_false:N \g_avaliacao_inchoices_bool
+  }
+\ExplSyntaxOff
 
 \NewDocumentEnvironment{me}{O{1}}{%
-  \avaliacao@inchoicestrue
-  \setlength{\columnseprule}{0pt}%
-  \setlength{\multicolsep}{0pt}%
-  \ifnum#1>1
-    \begin{multicols}{#1}%
-  \fi
-  \begin{avaliacao@choices}%
+  \avaliacao@mebegin{#1}%
 }{%
-  \end{avaliacao@choices}%
-  \ifnum#1>1
-    \end{multicols}%
-  \fi
-  \avaliacao@inchoicesfalse
+  \avaliacao@meend{#1}%
 }
 
 \NewDocumentEnvironment{subitens}{}{%
@@ -374,20 +483,18 @@
 
 \cs_new:Npn \avaliacao@currentletter:
   {
-    \ifavaliacao@inchoices
-      \alph { avaliacao@choicesi }
-    \else
-      \alph { enumi }
-    \fi
+    \bool_if:NTF \g_avaliacao_inchoices_bool
+      { \alph { avaliacao@choicesi } }
+      { \alph { enumi } }
   }
 
-\NewDocumentCommand { \avaliacao@questao@ini } { m }
+\cs_new_protected:Npn \avaliacao@questao@ini #1
   {
     \seq_gclear:N \g_avaliacao_thisq_seq
     \tl_gset:Nn \g_avaliacao_thisq_opt_tl {#1}
   }
 
-\NewDocumentCommand { \avaliacao@recordqitem } { m }
+\cs_new_protected:Npn \avaliacao@recordqitem #1
   {
     \tl_if_blank:nF {#1}
       {
@@ -448,53 +555,57 @@
       { { \thequestao } { \exp_not:V \l_avaliacao_gabs_tl } }
   }
 
-\NewDocumentCommand { \avaliacao@questao@fin } { }
+\cs_new_protected:Npn \avaliacao@questao@fin
   { \avaliacao@commit_keys: }
 
 \cs_new_protected:Npn \avaliacao@gabrow:nn #1#2
-  { \textbf{#1} & #2 \\[0.7ex] }
+  { \textbf {#1} & #2 \\ [ 0.7ex ] }
 
-\NewDocumentCommand { \avaliacao@gabarito@rows } { }
+\cs_new_protected:Npn \avaliacao@gabarito@rows
   {
     \seq_map_inline:Nn \g_avaliacao_gabarito_seq
       { \avaliacao@gabrow:nn ##1 }
   }
+
+\cs_new_protected:Npn \avaliacao@endmatter
+  {
+    \bool_if:NT \g_avaliacao_gabarito_bool
+      { \RecordProperties { avaliacao@examend } { avaliacao/exampages } }
+    \avaliacao@endcols
+    \avaliacao@printgabarito
+  }
+
+\cs_new_protected:Npn \avaliacao@printgabarito
+  {
+    \bool_if:NT \g_avaliacao_gabarito_bool
+      {
+        \clearpage
+        \pagestyle { avaliacao@gabarito }
+        { \sffamily
+          \noindent { \Large \bfseries Gabarito } \par
+          \vspace { 0.45em }
+          { \small
+            \avaliacao@univ \par
+            \avaliacao@facul \par
+            \avaliacao@major \par
+            \avaliacao@course ~ ( \avaliacao@semester )
+            \textemdash {} ~ \avaliacao@subject ~ ( \avaliacao@shift ) \par
+          }
+        }
+        \medskip
+        \noindent
+        \begin { tabularx } { \linewidth }
+          {
+            @ { } > { \centering \arraybackslash } p { 4.5em } @ { \hspace { 1.25em } }
+            > { \raggedright \arraybackslash } X @ { }
+          }
+          \textbf { Questão } & \textbf { Resposta } \\
+          \hline
+          \avaliacao@gabarito@rows
+        \end { tabularx }
+      }
+  }
 \ExplSyntaxOff
-
-\newcommand{\avaliacao@endmatter}{%
-  \ifavaliacao@gabarito
-    \immediate\write\@auxout{\string\gdef\string\avaliacao@lastn{\thepage}}%
-  \fi
-  \avaliacao@endcols
-  \avaliacao@printgabarito
-}
-
-\newcommand{\avaliacao@printgabarito}{%
-  \ifavaliacao@gabarito
-    \clearpage
-    \pagestyle{avaliacao@gabarito}%
-    {\sffamily
-      \noindent{\Large\bfseries Gabarito}\par
-      \vspace{0.45em}%
-      {\small
-        \avaliacao@univ\par
-        \avaliacao@facul\par
-        \avaliacao@major\par
-        \avaliacao@course\ (\avaliacao@semester)
-        \textemdash{} \avaliacao@subject\ (\avaliacao@shift)\par
-      }%
-    }%
-    \medskip
-    \noindent
-    \begin{tabularx}{\linewidth}{%
-        @{}>{\centering\arraybackslash}p{4.5em}@{\hspace{1.25em}}%
-        >{\raggedright\arraybackslash}X@{}}%
-      \textbf{Questão} & \textbf{Resposta} \\
-      \hline
-      \avaliacao@gabarito@rows
-    \end{tabularx}%
-  \fi
-}
 
 \NewDocumentCommand{\valor}{mm}{#1\,\ensuremath{\mathrm{#2}}}
 \NewDocumentCommand{\unidade}{m}{\ensuremath{\,\mathrm{#1}}}
@@ -504,24 +615,32 @@
 
 % -----------------------------------------------------
 % Hyperlinks (optional display text)
+% hyperref still delimits the URL with # after \hyper@normalise
 % -----------------------------------------------------
-\def\avaliacao@href@graburl#{%
-  \hyper@normalise\avaliacao@href@afterurl
-}
-\def\avaliacao@href@afterurl#1{%
-  \@ifnextchar\bgroup
-    {\href@{#1}}%
-    {\href@{#1}{\nolinkurl{#1}}}%
-}
-\newcommand{\avaliacao@patch@href}{%
-  \DeclareRobustCommand*{\href}[1][]{%
-    \begingroup
-    \setkeys{href}{##1}%
-    \@ifnextchar\bgroup\avaliacao@href@graburl{\hyper@normalise\href@}%
-  }%
-}
+\ExplSyntaxOn
+\cs_new_protected:Npn \avaliacao@hrefafterurl #1
+  {
+    \peek_meaning:NTF \bgroup
+      { \href@ {#1} }
+      { \href@ {#1} { \nolinkurl {#1} } }
+  }
+% Trailing # in the parameter text: next token must be `{` (TeX / hyperref).
+\cs_new_protected:Npn \avaliacao@hrefgraburl #
+  { \hyper@normalise \avaliacao@hrefafterurl }
+\cs_new_protected:Npn \avaliacao@patchhref
+  {
+    \RenewDocumentCommand { \href } { O { } }
+      {
+        \begingroup
+        \setkeys { href } {##1}
+        \peek_meaning:NTF \bgroup
+          { \avaliacao@hrefgraburl }
+          { \hyper@normalise \href@ }
+      }
+  }
+\ExplSyntaxOff
 \AddToHook{begindocument/before}{%
-  \@ifpackageloaded{hyperref}{}{%
+  \IfPackageLoadedTF{hyperref}{}{%
     \RequirePackage{hyperref}%
     \hypersetup{
       colorlinks=true,
@@ -531,9 +650,9 @@
       filecolor=blue,
     }%
   }%
-  \@ifpackageloaded{xurl}{}{\RequirePackage{xurl}}%
+  \IfPackageLoadedTF{xurl}{}{\RequirePackage{xurl}}%
   \urlstyle{same}%
-  \avaliacao@patch@href
+  \avaliacao@patchhref
 }
 
 \endinput
