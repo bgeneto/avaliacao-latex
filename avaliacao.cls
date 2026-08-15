@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}[2022/06/01]
-\ProvidesClass{avaliacao}[2026/08/15 v1.10 Avaliacao class for LuaLaTeX
+\ProvidesClass{avaliacao}[2026/08/15 v1.11 Avaliacao class for LuaLaTeX
 ^^JCreated by Bernhard Enders]
 
 % -----------------------------------------------------
@@ -12,12 +12,16 @@
 
 \newif\ifavaliacao@twocols
 \newif\ifavaliacao@keys
+\newif\ifavaliacao@gabarito
 \newif\ifavaliacao@colsstarted
 \newif\ifavaliacao@suspended
+\newif\ifavaliacao@inchoices
 
 \DeclareKeys[avaliacao]{
-  twocols .code = \avaliacao@twocolstrue,
-  keys    .code = \avaliacao@keystrue,
+  twocols    .code = \avaliacao@twocolstrue,
+  keys       .code = \avaliacao@keystrue,
+  gabarito   .code = \avaliacao@gabaritotrue,
+  answerkey  .code = \avaliacao@gabaritotrue,
   10pt    .code = \PassOptionsToClass{10pt}{article},
   11pt    .code = \PassOptionsToClass{11pt}{article},
   12pt    .code = \PassOptionsToClass{12pt}{article},
@@ -66,7 +70,18 @@
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 \fancyhf{}
-\fancyfoot[R]{\itshape\scriptsize página \thepage\ de \pageref{LastPage}}
+\ifavaliacao@gabarito
+  \newcommand{\avaliacao@lastn}{??}
+  \fancyfoot[R]{\itshape\scriptsize página \thepage\ de \avaliacao@lastn}
+\else
+  \fancyfoot[R]{\itshape\scriptsize página \thepage\ de \pageref{LastPage}}
+\fi
+\fancypagestyle{avaliacao@gabarito}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\itshape\scriptsize gabarito}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
 \setlength{\parskip}{0pt}
 \setlength{\parsep}{0pt}
 \setlength{\parindent}{0pt}
@@ -142,7 +157,7 @@
     \end{multicols*}%
   \fi
 }
-\AddToHook{enddocument}{\avaliacao@endcols}
+\AddToHook{enddocument}{\avaliacao@endmatter}
 \AddToHook{env/questao/before}{\avaliacao@ensurecols}
 \AddToHook{env/obs/before}{\avaliacao@ensurecols}
 
@@ -235,8 +250,12 @@
 }
 
 \NewDocumentEnvironment{questao}{O{} m}{%
+  \avaliacao@questao@ini{#1}%
   \avaliacao@qhead{#1}{#2}%
-}{\par\medskip}
+}{%
+  \avaliacao@questao@fin
+  \par\medskip
+}
 
 \NewDocumentEnvironment{instrucoes}{}{%
   \begin{tcolorbox}[
@@ -296,18 +315,31 @@
 
 \NewDocumentCommand{\qitem}{m}{%
   \item
+  \avaliacao@recordqitem{#1}%
   \ifavaliacao@keys
-    \hspace{-0.95\avaliacao@qitemwd}%
-    \makebox[0pt][l]{#1}%
-    \hspace{0.95\avaliacao@qitemwd}%
+    \ifavaliacao@inchoices
+      \hspace{-0.95\avaliacao@qitemwd}%
+      \makebox[0pt][l]{#1}%
+      \hspace{0.95\avaliacao@qitemwd}%
+    \else
+      \if\relax\detokenize{#1}\relax
+      \else
+        \mbox{\fbox{\strut#1}}\enspace
+      \fi
+    \fi
   \fi
 }
 
 \NewDocumentEnvironment{vf}{}{%
+  \avaliacao@inchoicestrue
   \begin{avaliacao@choices}%
-}{\end{avaliacao@choices}}
+}{%
+  \end{avaliacao@choices}%
+  \avaliacao@inchoicesfalse
+}
 
 \NewDocumentEnvironment{me}{O{1}}{%
+  \avaliacao@inchoicestrue
   \setlength{\columnseprule}{0pt}%
   \setlength{\multicolsep}{0pt}%
   \ifnum#1>1
@@ -319,11 +351,150 @@
   \ifnum#1>1
     \end{multicols}%
   \fi
+  \avaliacao@inchoicesfalse
 }
 
 \NewDocumentEnvironment{subitens}{}{%
   \begin{enumerate}[align=left,leftmargin=*,widest=a,label=(\alph{enumi})]%
 }{\end{enumerate}}
+
+% -----------------------------------------------------
+% Answer key collection and optional end-matter sheet
+% -----------------------------------------------------
+\ExplSyntaxOn
+\seq_new:N \g_avaliacao_gabarito_seq
+\seq_new:N \g_avaliacao_thisq_seq
+\tl_new:N \g_avaliacao_thisq_opt_tl
+\tl_new:N \l_avaliacao_gabs_tl
+\seq_new:N \l_avaliacao_fmt_vf_seq
+\seq_new:N \l_avaliacao_fmt_mark_seq
+\seq_new:N \l_avaliacao_fmt_other_seq
+\bool_new:N \l_avaliacao_all_vf_bool
+\bool_new:N \l_avaliacao_all_mark_bool
+
+\cs_new:Npn \avaliacao@currentletter:
+  {
+    \ifavaliacao@inchoices
+      \alph { avaliacao@choicesi }
+    \else
+      \alph { enumi }
+    \fi
+  }
+
+\NewDocumentCommand { \avaliacao@questao@ini } { m }
+  {
+    \seq_gclear:N \g_avaliacao_thisq_seq
+    \tl_gset:Nn \g_avaliacao_thisq_opt_tl {#1}
+  }
+
+\NewDocumentCommand { \avaliacao@recordqitem } { m }
+  {
+    \tl_if_blank:nF {#1}
+      {
+        \seq_gput_right:Ne \g_avaliacao_thisq_seq
+          { { \avaliacao@currentletter: } { \exp_not:n {#1} } }
+      }
+  }
+
+\cs_new_protected:Npn \avaliacao@classify_pair:nn #1#2
+  {
+    \seq_put_right:Ne \l_avaliacao_fmt_vf_seq
+      { #1)~ \exp_not:n {#2} }
+    \seq_put_right:Ne \l_avaliacao_fmt_mark_seq { \str_uppercase:n {#1} }
+    \seq_put_right:Ne \l_avaliacao_fmt_other_seq
+      { #1)~ \exp_not:n {#2} }
+    \str_case:nnF {#2}
+      {
+        {V} { \bool_set_false:N \l_avaliacao_all_mark_bool }
+        {F} { \bool_set_false:N \l_avaliacao_all_mark_bool }
+        {X} { \bool_set_false:N \l_avaliacao_all_vf_bool }
+        {x} { \bool_set_false:N \l_avaliacao_all_vf_bool }
+        {*} { \bool_set_false:N \l_avaliacao_all_vf_bool }
+      }
+      {
+        \bool_set_false:N \l_avaliacao_all_vf_bool
+        \bool_set_false:N \l_avaliacao_all_mark_bool
+      }
+  }
+
+\cs_new_protected:Npn \avaliacao@format_qitems:
+  {
+    \bool_set_true:N \l_avaliacao_all_vf_bool
+    \bool_set_true:N \l_avaliacao_all_mark_bool
+    \seq_clear:N \l_avaliacao_fmt_vf_seq
+    \seq_clear:N \l_avaliacao_fmt_mark_seq
+    \seq_clear:N \l_avaliacao_fmt_other_seq
+    \seq_map_inline:Nn \g_avaliacao_thisq_seq
+      { \avaliacao@classify_pair:nn ##1 }
+    \bool_if:NTF \l_avaliacao_all_vf_bool
+      { \tl_set:Ne \l_avaliacao_gabs_tl { \seq_use:Nn \l_avaliacao_fmt_vf_seq { \quad } } }
+      {
+        \bool_if:NTF \l_avaliacao_all_mark_bool
+          { \tl_set:Ne \l_avaliacao_gabs_tl { \seq_use:Nn \l_avaliacao_fmt_mark_seq { ,~ } } }
+          { \tl_set:Ne \l_avaliacao_gabs_tl { \seq_use:Nn \l_avaliacao_fmt_other_seq { \quad } } }
+      }
+  }
+
+\cs_new_protected:Npn \avaliacao@commit_keys:
+  {
+    \tl_set:Nn \l_avaliacao_gabs_tl { -- }
+    \seq_if_empty:NTF \g_avaliacao_thisq_seq
+      {
+        \tl_if_empty:NF \g_avaliacao_thisq_opt_tl
+          { \tl_set_eq:NN \l_avaliacao_gabs_tl \g_avaliacao_thisq_opt_tl }
+      }
+      { \avaliacao@format_qitems: }
+    \seq_gput_right:Ne \g_avaliacao_gabarito_seq
+      { { \thequestao } { \exp_not:V \l_avaliacao_gabs_tl } }
+  }
+
+\NewDocumentCommand { \avaliacao@questao@fin } { }
+  { \avaliacao@commit_keys: }
+
+\cs_new_protected:Npn \avaliacao@gabrow:nn #1#2
+  { \textbf{#1} & #2 \\[0.7ex] }
+
+\NewDocumentCommand { \avaliacao@gabarito@rows } { }
+  {
+    \seq_map_inline:Nn \g_avaliacao_gabarito_seq
+      { \avaliacao@gabrow:nn ##1 }
+  }
+\ExplSyntaxOff
+
+\newcommand{\avaliacao@endmatter}{%
+  \ifavaliacao@gabarito
+    \immediate\write\@auxout{\string\gdef\string\avaliacao@lastn{\thepage}}%
+  \fi
+  \avaliacao@endcols
+  \avaliacao@printgabarito
+}
+
+\newcommand{\avaliacao@printgabarito}{%
+  \ifavaliacao@gabarito
+    \clearpage
+    \pagestyle{avaliacao@gabarito}%
+    {\sffamily
+      \noindent{\Large\bfseries Gabarito}\par
+      \vspace{0.45em}%
+      {\small
+        \avaliacao@univ\par
+        \avaliacao@facul\par
+        \avaliacao@major\par
+        \avaliacao@course\ (\avaliacao@semester)
+        \textemdash{} \avaliacao@subject\ (\avaliacao@shift)\par
+      }%
+    }%
+    \medskip
+    \noindent
+    \begin{tabularx}{\linewidth}{%
+        @{}>{\centering\arraybackslash}p{4.5em}@{\hspace{1.25em}}%
+        >{\raggedright\arraybackslash}X@{}}%
+      \textbf{Questão} & \textbf{Resposta} \\
+      \hline
+      \avaliacao@gabarito@rows
+    \end{tabularx}%
+  \fi
+}
 
 \NewDocumentCommand{\valor}{mm}{#1\,\ensuremath{\mathrm{#2}}}
 \NewDocumentCommand{\unidade}{m}{\ensuremath{\,\mathrm{#1}}}
