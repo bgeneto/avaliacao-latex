@@ -1,23 +1,42 @@
-\NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{avaliacao}[2026/08/15 Avaliacao LaTeXclass v1.02 for LuaLaTeX
+\NeedsTeXFormat{LaTeX2e}[2022/06/01]
+\ProvidesClass{avaliacao}[2026/08/15 v1.10 Avaliacao class for LuaLaTeX
 ^^JCreated by Bernhard Enders]
 
-\newif\if@twocols\@twocolsfalse
-\DeclareOption{twocols}{\@twocolstrue}
-\newif\if@keys\@keysfalse
-\DeclareOption{keys}{\@keystrue}
-\DeclareOption{10pt}{\PassOptionsToClass{10pt}{letter}}
-\DeclareOption{11pt}{\PassOptionsToClass{11pt}{letter}}
-\DeclareOption{12pt}{\PassOptionsToClass{12pt}{letter}}
+% -----------------------------------------------------
+% Engine and options (kernel key=value, 2022+)
+% -----------------------------------------------------
+\RequirePackage{iftex}
+\ifluatex\else
+  \ClassError{avaliacao}{This class requires LuaLaTeX}{Compile with lualatex.}
+\fi
+
+\newif\ifavaliacao@twocols
+\newif\ifavaliacao@keys
+\newif\ifavaliacao@colsstarted
+\newif\ifavaliacao@suspended
+
+\DeclareKeys[avaliacao]{
+  twocols .code = \avaliacao@twocolstrue,
+  keys    .code = \avaliacao@keystrue,
+  10pt    .code = \PassOptionsToClass{10pt}{article},
+  11pt    .code = \PassOptionsToClass{11pt}{article},
+  12pt    .code = \PassOptionsToClass{12pt}{article},
+}
+\DeclareUnknownKeyHandler[avaliacao]{%
+  \if\relax\detokenize{#2}\relax
+    \PassOptionsToPackage{#1}{geometry}%
+  \else
+    \PassOptionsToPackage{#1=#2}{geometry}%
+  \fi
+}
 \PassOptionsToPackage{includefoot}{geometry}
-\DeclareOption*{\PassOptionsToPackage{\CurrentOption}{geometry}}
-\ProcessOptions\relax\LoadClass{letter}
+\ProcessKeyOptions[avaliacao]
+\LoadClass{article}
 
 % -----------------------------------------------------
-% Pacotes necessários
+% Packages
 % -----------------------------------------------------
 \RequirePackage{fontspec}
-\RequirePackage{luacode}
 \RequirePackage{unicode-math}
 \RequirePackage{geometry}
 \RequirePackage{polyglossia}
@@ -25,287 +44,296 @@
 \RequirePackage{graphicx}
 \RequirePackage{xcolor}
 \RequirePackage{tcolorbox}
-\RequirePackage{fancyhdr} % header and footer setup
-\RequirePackage{twoopt}
-\RequirePackage{ifthen}
-\RequirePackage{xstring}
+\RequirePackage{fancyhdr}
 \RequirePackage{hhline}
-\RequirePackage{array,calc}
+\RequirePackage{array}
+\RequirePackage{colortbl}
 \RequirePackage{tabularx}
 \RequirePackage{multirow}
 \RequirePackage{lastpage}
-\RequirePackage{colortbl}
-%\RequirePackage{arydshln} % load after array, longtable, colortab, and colortbl packages!
 \RequirePackage{multicol}
-    \raggedcolumns
-    \setlength{\columnsep}{1.5pc}
-    \setlength\columnseprule{.4pt}
+  \raggedcolumns
+  \setlength{\columnsep}{1.5pc}
+  \setlength{\columnseprule}{.4pt}
 \RequirePackage{enumitem}
-    \setlist{nosep} % removes all vertical spacing in enumerate or itemize etc...
-    \newcommand*\mylstlabel{($\quad$)}
-    \newlength\mylstlabelwidth
-    \settowidth\mylstlabelwidth{\mylstlabel}
-    \if@keys
-        \newcommand\qitem[1]{\item\hskip-0.95\mylstlabelwidth\makebox[0pt][l]{#1}\hskip0.95\mylstlabelwidth}
-    \else
-        \newcommand\qitem[1]{\item}
-    \fi
-\RequirePackage{soul}
-\RequirePackage[full]{textcomp}
-\RequirePackage{amsthm}
-\RequirePackage{amsmath}
-\RequirePackage{etoolbox}
+\RequirePackage{microtype}
 \RequirePackage{libertine}
-\RequirePackage{tikz}
 
 % -----------------------------------------------------
-% Header and footer setup
+% Page chrome
 % -----------------------------------------------------
 \pagestyle{fancy}
-\renewcommand{\headrulewidth}{0.0pt}
-\renewcommand{\footrulewidth}{0.0pt}
-%\setlength{\footskip}{2ex}
-\lhead{} \chead{} \rhead{} \lfoot{} \cfoot{}
-\rfoot{\itshape\scriptsize página \thepage\ de \pageref{LastPage}}
-
-% -----------------------------------------------------
-% No larger space after a period
-% -----------------------------------------------------
-\AtBeginDocument{\frenchspacing}
-\AtBeginDocument{\usepackage{ziffer}} % don't know why \RequirePackage{ziffer} does not work here!
-%\AtBeginDocument{\everymath={\displaystyle}} % use \displaystyle\frac all over the document
-
-% -----------------------------------------------------
-% Opções do leiaute
-% -----------------------------------------------------
-\setlength{\tabcolsep}{1pt}
-\newcolumntype{C}{>{\centering\arraybackslash}m{3cm}}
-\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancyhf{}
+\fancyfoot[R]{\itshape\scriptsize página \thepage\ de \pageref{LastPage}}
 \setlength{\parskip}{0pt}
 \setlength{\parsep}{0pt}
 \setlength{\parindent}{0pt}
-
-% -----------------------------------------------------
-% Novos comandos da classe
-% -----------------------------------------------------
-\def\logo#1{\gdef\@logo{#1}}
-\def\@logo{logo_unb_vert} % default logo filename
-\def\university#1{\gdef\@univ{#1}}
-\def\@univ{\@latex@error{No \noexpand\university defined}\@ehc}
-\let\college=\university
-\let\universidade=\university
-\def\faculty#1{\gdef\@facul{#1}}
-\def\@facul{\@latex@error{No \noexpand\faculty defined}\@ehc}
-\let\school=\faculty
-\let\faculdade=\faculty
-\let\institute=\faculty
-\let\instituto=\faculty
-\let\department=\faculty
-\let\departamento=\faculty
-\def\major#1{\gdef\@major{#1}}
-\def\@major{Ciências Naturais}
-\let\program=\major
-\let\curso=\major
-\def\course#1{\gdef\@course{#1}}
-\def\@course{\@latex@error{No \noexpand\course defined}\@ehc}
-\let\disciplina=\course
-\def\semester#1{\gdef\@semester{#1}}
-\def\@semester{\@latex@error{No \noexpand\semester defined}\@ehc}
-\let\semestre=\semester
-\def\subject#1{\gdef\@subject{#1}}
-\def\@subject{\@latex@error{No \noexpand\subject defined}\@ehc}
-\let\assunto=\subject
-\def\shift#1{\gdef\@shift{#1}}
-\def\@shift{\@latex@error{No \noexpand\shift defined}\@ehc}
-\let\turno=\shift
-\def\professor#1{\gdef\@prof{#1}}
-\def\@prof{\@latex@error{No \noexpand\professor defined}\@ehc}
-
-% extra vertical space for tabular cells
-\newcommand*\TopStrut{\rule{0pt}{2.6ex}}       % Top strut
-\newcommand*\BottomStrut{\rule[-1.2ex]{0pt}{0pt}} % Bottom strut
-
+\setlength{\tabcolsep}{1pt}
+\newcolumntype{C}{>{\centering\arraybackslash}m{3cm}}
+\setlist[enumerate,itemize]{nosep}
 \definecolor{mygray}{gray}{0.85}
 
+\AddToHook{begindocument}{\frenchspacing}
+\AddToHook{begindocument}{\RequirePackage{ziffer}}
+
+% \i/\j in math → ı/ȷ (unicode-math); text \i/\j unchanged
+\AddToHook{begindocument}{%
+  \NewCommandCopy\avaliacao@i\i
+  \NewCommandCopy\avaliacao@j\j
+  \DeclareRobustCommand{\i}{\ifmmode\imath\else\avaliacao@i\fi}%
+  \DeclareRobustCommand{\j}{\ifmmode\jmath\else\avaliacao@j\fi}%
+}
+
 % -----------------------------------------------------
-% Cabeçalho da atividade com logo
+% Header metadata (PT/EN aliases)
 % -----------------------------------------------------
-\newcommand{\header}{%
-    {\sffamily%
+\newcommand*{\avaliacao@logo}{logo_unb_vert}
+\newcommand*{\avaliacao@univ}{\ClassError{avaliacao}{No \protect\university\space defined}{}}
+\newcommand*{\avaliacao@facul}{\ClassError{avaliacao}{No \protect\faculty\space defined}{}}
+\newcommand*{\avaliacao@major}{Ciências Naturais}
+\newcommand*{\avaliacao@course}{\ClassError{avaliacao}{No \protect\course\space defined}{}}
+\newcommand*{\avaliacao@semester}{\ClassError{avaliacao}{No \protect\semester\space defined}{}}
+\newcommand*{\avaliacao@subject}{\ClassError{avaliacao}{No \protect\subject\space defined}{}}
+\newcommand*{\avaliacao@shift}{\ClassError{avaliacao}{No \protect\shift\space defined}{}}
+\newcommand*{\avaliacao@prof}{\ClassError{avaliacao}{No \protect\professor\space defined}{}}
+
+\NewDocumentCommand{\logo}{m}{\gdef\avaliacao@logo{#1}}
+\NewDocumentCommand{\university}{m}{\gdef\avaliacao@univ{#1}}
+\NewDocumentCommand{\faculty}{m}{\gdef\avaliacao@facul{#1}}
+\NewDocumentCommand{\major}{m}{\gdef\avaliacao@major{#1}}
+\NewDocumentCommand{\course}{m}{\gdef\avaliacao@course{#1}}
+\NewDocumentCommand{\semester}{m}{\gdef\avaliacao@semester{#1}}
+\NewDocumentCommand{\subject}{m}{\gdef\avaliacao@subject{#1}}
+\NewDocumentCommand{\shift}{m}{\gdef\avaliacao@shift{#1}}
+\NewDocumentCommand{\professor}{m}{\gdef\avaliacao@prof{#1}}
+
+\NewCommandCopy{\college}{\university}
+\NewCommandCopy{\universidade}{\university}
+\NewCommandCopy{\school}{\faculty}
+\NewCommandCopy{\faculdade}{\faculty}
+\NewCommandCopy{\institute}{\faculty}
+\NewCommandCopy{\instituto}{\faculty}
+\NewCommandCopy{\department}{\faculty}
+\NewCommandCopy{\departamento}{\faculty}
+\NewCommandCopy{\program}{\major}
+\NewCommandCopy{\curso}{\major}
+\NewCommandCopy{\disciplina}{\course}
+\NewCommandCopy{\semestre}{\semester}
+\NewCommandCopy{\assunto}{\subject}
+\NewCommandCopy{\turno}{\shift}
+
+% -----------------------------------------------------
+% Two-column body: start at first question/obs, not in \header
+% -----------------------------------------------------
+\newcommand{\avaliacao@ensurecols}{%
+  \ifavaliacao@twocols
+    \ifavaliacao@colsstarted
+    \else
+      \global\avaliacao@colsstartedtrue
+      \begin{multicols*}{2}%
+    \fi
+  \fi
+}
+\newcommand{\avaliacao@endcols}{%
+  \ifavaliacao@colsstarted
+    \global\avaliacao@colsstartedfalse
+    \end{multicols*}%
+  \fi
+}
+\AddToHook{enddocument}{\avaliacao@endcols}
+\AddToHook{env/questao/before}{\avaliacao@ensurecols}
+\AddToHook{env/obs/before}{\avaliacao@ensurecols}
+
+% Full-width instructions even if columns already started
+\AddToHook{env/instrucoes/before}{%
+  \global\avaliacao@suspendedfalse
+  \ifavaliacao@twocols
+    \ifavaliacao@colsstarted
+      \global\avaliacao@suspendedtrue
+      \avaliacao@endcols
+    \fi
+  \fi
+}
+\AddToHook{env/instrucoes/after}{%
+  \ifavaliacao@suspended
+    \avaliacao@ensurecols
+  \fi
+}
+
+% -----------------------------------------------------
+% Institutional header (full width; does not start columns)
+% -----------------------------------------------------
+\NewDocumentCommand{\header}{}{%
+  {\sffamily
+    \noindent
     \begin{tabularx}{\textwidth}{cX|C|}%
     \cline{3-3}%
-    \multirow{6}{*}{\parbox[t]{3.2cm}{\includegraphics[width=2.8cm]{\@logo}}} & \Large{\@univ} & \\%
-    & \large{\@facul} & \\%
+    \multirow{6}{*}{\parbox[t]{3.2cm}{\includegraphics[width=2.8cm]{\avaliacao@logo}}} &
+      \Large{\avaliacao@univ} & \\%
+    & \large{\avaliacao@facul} & \\%
     & \begin{tabular}[b]{@{}ll}%
-    \textit{Curso:} & \@major\\%
-    \textit{Disciplina:} & \@course\space(\@semester)\\%
-    \textit{Assunto:} & \@subject\space (\@shift)\\%
-    \textit{Professor:} & \@prof\\%
-    \end{tabular} & \footnotesize\textcolor{lightgray}{Nota}\\\hline%
-    \end{tabularx}\par}%
-    % -----------------------------------------------------
-    % Formulário: Nome e Matrícula
-    % -----------------------------------------------------
-    {\scriptsize%
+        \textit{Curso:} & \avaliacao@major\\%
+        \textit{Disciplina:} & \avaliacao@course\space(\avaliacao@semester)\\%
+        \textit{Assunto:} & \avaliacao@subject\space (\avaliacao@shift)\\%
+        \textit{Professor:} & \avaliacao@prof\\%
+      \end{tabular} &
+      \footnotesize\textcolor{lightgray}{Nota}\\\hline
+    \end{tabularx}\par
+  }%
+  {\scriptsize
+    \noindent
     \begin{tabularx}{\textwidth}{p{.65\linewidth}p{2em}X}%
-    %\hdasline%
-    \textbf{Nome:} & \space & \textbf{Matr\'{i}cula:}\\[1.5em]\hhline{-~-}%
-    \end{tabularx}\par%
-    }%
-    \if@twocols%
-        \begin{multicols*}{2}%
-        \AtEndDocument{\end{multicols*}}%
-    \fi%
-}% fim do cabecalho
+    \textbf{Nome:} && \textbf{Matrícula:}\\[1.5em]\hhline{-~-}%
+    \end{tabularx}\par
+  }%
+}
 
 % -----------------------------------------------------
-% Encontra o primeiro caractere de uma string
-% -----------------------------------------------------
-\def\firstchar#1{\expandafter\FirstChar#1\FirstChar}
-\def\FirstChar#1#2\FirstChar{#1}
-
-% -----------------------------------------------------
-% Cabeçalho das questões
+% Question banner (gray “Questão N” cell + points; same look as before)
 % -----------------------------------------------------
 \newcounter{questao}
-\newlength{\colA}
-\setlength{\colA}{6.2em} % largura da primeira coluna, contendo o texto ``Questão <num>''
-\newlength{\colB} % largura da segunda coluna calculada em função da largura da linha
-\newcommand*{\pts}{pontos}
 
-\newcommand{\questionheader}[2]{%
-    \newcommand*{\val}{#2}%
-    \newcommand*{\primeirocaractere}{\firstchar\val}%
-    \ifthenelse{\equal{\primeirocaractere}{0}\OR\equal{\primeirocaractere}{1}}{\renewcommand*{\pts}{ponto}}{}%
-    \setlength\colB{\linewidth-\the\colA-\tabcolsep*4-\arrayrulewidth*2}%
-    \stepcounter{questao}%
-    \begin{tabular*}{\linewidth}{|>{\centering\hspace{0pt}\arraybackslash}b{\the\colA}|>
-        {\raggedleft\hspace{0pt}\arraybackslash}b{\the\colB}}%
-        \hhline{-}\cellcolor{mygray}%
-         Questão \arabic{questao} & \if@keys\hfill\fbox{#1}\hfill\fi\itshape\ifthenelse{\equal{#2}{0}}{}{#2 \pts}\TopStrut\BottomStrut\\\hline%
-    \end{tabular*}%
-    \par\vspace*{2\lineskip}\par%%
-}
-
-% -----------------------------------------------------
-% Sair do ambiente duas colunas
-% -----------------------------------------------------
-\makeatletter
-
-\newcount\saved@colnumber
-\newenvironment{instrucoes}
-  {%
-    \begin{tcolorbox}[%
-      colback=mygray, arc=8pt, outer arc=8pt,
-      left=1pt, right=1pt, top=2pt, bottom=2pt,
-      boxrule=0.5pt, width=\linewidth,
-      colframe=black,
-      before upper={\sloppy}
-    ]%
-    {\centering\bfseries INSTRUÇÕES\par}
-    \begin{itemize}[leftmargin=*]
-  }%
-  {%
-    \end{itemize}%
-    \end{tcolorbox}%
-    \aftergroup\restore@multicols%
+\ExplSyntaxOn
+\cs_new:Npn \avaliacao@ptslabel #1
+  {
+    \tl_set:Nn \l_tmpa_tl {#1}
+    \tl_replace_all:Nnn \l_tmpa_tl { , } { . }
+    \fp_compare:nTF { \l_tmpa_tl < 2 } { ponto } { pontos }
   }
+\NewDocumentCommand { \avaliacao@points } { m }
+  {
+    \tl_if_eq:nnF {#1} {0}
+      { \textit { #1 ~ \avaliacao@ptslabel {#1} } }
+  }
+\ExplSyntaxOff
 
-\BeforeBeginEnvironment{instrucoes}{%
-  \if@twocols%
-    \global\saved@colnumber=\col@number%
-    \end{multicols*}%
-  \fi%
+\newcommand{\avaliacao@qhead}[2]{%
+  \refstepcounter{questao}%
+  \par\nobreak
+  \noindent
+  \begin{tabular*}{\linewidth}{%
+      |>{\centering\arraybackslash}p{6.2em}|
+      @{\extracolsep{\fill}}r}%
+    \hhline{-}%
+    \cellcolor{mygray}\rule{0pt}{2.6ex}Questão~\thequestao &
+    \avaliacao@keybox{#1}\avaliacao@points{#2}\rule[-1.2ex]{0pt}{0pt}\\
+    \hline
+  \end{tabular*}\par\nobreak
+  \vspace{2\lineskip}%
+  \nobreak
 }
 
-\def\restore@multicols{%
-  \if@twocols%
-    \begin{multicols*}{\saved@colnumber}%
+\newcommand{\avaliacao@keybox}[1]{%
+  \ifavaliacao@keys
+    \if\relax\detokenize{#1}\relax
+    \else
+      \fbox{#1}\quad
+    \fi
   \fi
 }
 
-\newenvironment{me}[1][1]{%
-  \setlength\columnseprule{0pt}%
-  \def\me@cols{#1}%
-  \ifnum\me@cols=1
-    \enumerate[align=left, leftmargin=*, widest=a,
-               label=\alph*.~($\quad\:$)]
-  \else
-    \vspace{-2ex}%
-    \begin{multicols}{\me@cols}%
-    \enumerate[align=left, leftmargin=*, widest=a,
-               label=\alph*.~($\quad\:$)]
-  \fi
+\NewDocumentEnvironment{questao}{O{} m}{%
+  \avaliacao@qhead{#1}{#2}%
+}{\par\medskip}
+
+\NewDocumentEnvironment{instrucoes}{}{%
+  \begin{tcolorbox}[
+    colback=mygray,
+    arc=8pt,
+    outer arc=8pt,
+    left=1pt,
+    right=1pt,
+    top=2pt,
+    bottom=2pt,
+    boxrule=0.5pt,
+    width=\linewidth,
+    colframe=black,
+    before upper={\sloppy},
+  ]
+  {\centering\bfseries INSTRUÇÕES\par}
+  \begin{itemize}[leftmargin=*]
 }{%
-  \ifnum\me@cols=1
-    \endenumerate
-  \else
-    \endenumerate
+  \end{itemize}%
+  \end{tcolorbox}%
+}
+
+\NewDocumentEnvironment{obs}{}{%
+  \begin{tcolorbox}[
+    colback=mygray,
+    arc=0pt,
+    outer arc=0pt,
+    left=1pt,
+    right=1pt,
+    top=2pt,
+    bottom=2pt,
+    boxrule=0pt,
+    bottomrule=0.75pt,
+    toprule=0.75pt,
+    boxsep=1ex,
+    width=\linewidth,
+    before upper={\sloppy},
+  ]
+}{\end{tcolorbox}\medskip}
+
+% -----------------------------------------------------
+% Choice lists
+% -----------------------------------------------------
+\newlist{avaliacao@choices}{enumerate}{1}
+\setlist[avaliacao@choices]{
+  align=left,
+  leftmargin=*,
+  widest=a,
+  label=\alph*.($\quad\:$),
+  nosep,
+  topsep=0pt,
+  partopsep=0pt,
+}
+
+\newlength{\avaliacao@qitemwd}
+\AddToHook{begindocument}{\settowidth{\avaliacao@qitemwd}{($\quad$)}}
+
+\NewDocumentCommand{\qitem}{m}{%
+  \item
+  \ifavaliacao@keys
+    \hspace{-0.95\avaliacao@qitemwd}%
+    \makebox[0pt][l]{#1}%
+    \hspace{0.95\avaliacao@qitemwd}%
+  \fi
+}
+
+\NewDocumentEnvironment{vf}{}{%
+  \begin{avaliacao@choices}%
+}{\end{avaliacao@choices}}
+
+\NewDocumentEnvironment{me}{O{1}}{%
+  \setlength{\columnseprule}{0pt}%
+  \setlength{\multicolsep}{0pt}%
+  \ifnum#1>1
+    \begin{multicols}{#1}%
+  \fi
+  \begin{avaliacao@choices}%
+}{%
+  \end{avaliacao@choices}%
+  \ifnum#1>1
     \end{multicols}%
   \fi
 }
 
-\makeatother
+\NewDocumentEnvironment{subitens}{}{%
+  \begin{enumerate}[align=left,leftmargin=*,widest=a,label=(\alph{enumi})]%
+}{\end{enumerate}}
 
-% -----------------------------------------------------
-% Questão dissertativa
-% -----------------------------------------------------
-%\newenvironment{questao}[2][0]% pontuação opcional, valor padrão = 1 ponto
-%    {}%
-%    {\par\medskip}
-
-\newenvironment{questao}[2][]{%
-    \questionheader{#1}{#2}%
-}{\par\medskip}
-
-% -----------------------------------------------------
-% Questão de multípla escolha
-% -----------------------------------------------------
-\newenvironment{multicol}[2][0]%
-    {\questionheader{#1}{#2}%
-}{\medskip}
-
-% -----------------------------------------------------
-% Itens de V ou F
-% -----------------------------------------------------
-\newenvironment{vf}
-  {\renewcommand\theenumi{\alph{enumi}.($\quad\:$)}%
-   \renewcommand\labelenumi{\theenumi}%
-   \begin{enumerate}[align=left,leftmargin=*,widest=a]}
-  {\end{enumerate}}
-
-%% Ambiente para itens de múltipla escolha (com ou sem resposta marcada)
-%\newenvironment{me}[1][2]{%
-%   \setlength\columnseprule{0pt}%
-%   \vspace*{-2ex}%
-%   \renewcommand\theenumi{\alph{enumi}.($\quad\:$)}%
-%   \renewcommand\labelenumi{\theenumi}%
-%   \begin{multicols*}{#1}%
-%   \begin{enumerate}[align=left,leftmargin=*,widest=a]}
-%  {\end{enumerate}\end{multicols*}}
-
-
-
-\newenvironment{subitens}{%
-    \begin{enumerate}[align=left,leftmargin=*,widest=a,label=(\alph{enumi})]}{\end{enumerate}}
-
-\newenvironment{obs}{%
-  \begin{tcolorbox}[colback=mygray,arc=0pt,outer arc=0pt, left=1pt,right=1pt,top=2pt,bottom=2pt,%
-      boxrule=0pt,bottomrule=0.75pt,toprule=0.75pt,boxsep=1ex,width=\linewidth,
-      before upper={\sloppy}]%
-}{\end{tcolorbox}\medskip}
-
-\providecommand*{\valor}[2]{#1\,\ensuremath{\mathrm{#2}}}
-\providecommand*{\unidade}[1]{\ensuremath{\,\mathrm{#1}}}
-\providecommand{\outracoluna}{\vfill\columnbreak}
+\NewDocumentCommand{\valor}{mm}{#1\,\ensuremath{\mathrm{#2}}}
+\NewDocumentCommand{\unidade}{m}{\ensuremath{\,\mathrm{#1}}}
+\NewDocumentCommand{\outracoluna}{}{\avaliacao@ensurecols\vfill\columnbreak}
 
 \DeclareMathOperator{\sen}{sen}
 
 % -----------------------------------------------------
-% Hyperlinks: load late so the preamble can still pass options.
-% \href{url} prints the URL; \href{url}{text} keeps hyperref's two-arg form.
+% Hyperlinks (optional display text)
 % -----------------------------------------------------
-\makeatletter
 \def\avaliacao@href@graburl#{%
   \hyper@normalise\avaliacao@href@afterurl
 }
@@ -314,14 +342,14 @@
     {\href@{#1}}%
     {\href@{#1}{\nolinkurl{#1}}}%
 }
-\def\avaliacao@patch@href{%
+\newcommand{\avaliacao@patch@href}{%
   \DeclareRobustCommand*{\href}[1][]{%
     \begingroup
     \setkeys{href}{##1}%
     \@ifnextchar\bgroup\avaliacao@href@graburl{\hyper@normalise\href@}%
   }%
 }
-\AtEndPreamble{%
+\AddToHook{begindocument/before}{%
   \@ifpackageloaded{hyperref}{}{%
     \RequirePackage{hyperref}%
     \hypersetup{
@@ -336,6 +364,5 @@
   \urlstyle{same}%
   \avaliacao@patch@href
 }
-\makeatother
 
 \endinput

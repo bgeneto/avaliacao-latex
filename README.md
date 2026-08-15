@@ -5,7 +5,8 @@ Classe **LuaLaTeX** para provas e avaliações impressas (cabeçalho institucion
 ## Requisitos
 
 - [LuaLaTeX](https://www.luatex.org/) (TeX Live ou MiKTeX)
-- Pacotes usados pela classe: `fontspec`, `unicode-math`, `libertine`, `polyglossia`, `tcolorbox`, `tikz`, entre outros (instalação completa do TeX Live cobre isso)
+- Pacotes usados pela classe: `fontspec`, `unicode-math`, `libertine`, `polyglossia`, `tcolorbox`, `hyperref`, entre outros (uma instalação completa do TeX Live cobre isso)
+- LaTeX 2022/06/01 ou posterior (opções da classe via `\DeclareKeys`)
 
 ## Compilar o exemplo
 
@@ -47,7 +48,7 @@ Coloque `avaliacao.cls` (e o logo, se usar um arquivo próprio) no mesmo diretó
 
 | Opção | Efeito |
 |-------|--------|
-| `twocols` | Duas colunas após o cabeçalho |
+| `twocols` | Duas colunas a partir da primeira `questao`/`obs` |
 | `keys` | Imprime gabarito (`\qitem` e argumento opcional de `questao`) |
 | `10pt`, `11pt`, `12pt` | Tamanho da fonte |
 | demais | Encaminhadas ao `geometry` (`a4paper`, `margin=...`, etc.) |

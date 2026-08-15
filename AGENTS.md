@@ -14,14 +14,14 @@ This repository is a **LuaLaTeX** document class for printed exams (`avaliacao.c
 |------|------|
 | `avaliacao.cls` | Class implementation. Keep the public API stable. |
 | `exemplo.tex` | Canonical usage example. Mirror its patterns in new exams. |
-| `.cursor/rules/avaliacao-class.mdc` | File-scoped conventions for `.tex`/`.cls`/`.sty`. |
 
 ## When editing the class
 
 - Preserve Portuguese as the document language (`polyglossia`).
 - Keep PT/EN command aliases (`\universidade`/`\university`, `\disciplina`/`\course`, …).
 - The `keys` option controls whether `\qitem` and the optional `questao` argument print answers; student copies omit `keys`.
-- Decimal points in point values use a comma (`1,5`), matching `ziffer`.
+- Point values use a comma (`1,5`). In pt-BR, *ponto* is used for values strictly less than 2 (`0,5`, `1`, `1,5`); *pontos* from `2` on.
+- `twocols` starts at the first `questao`/`obs`, so `instrucoes` stays full width without breaking out of `multicols`.
 
 ## When writing an exam
 
