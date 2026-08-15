@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{avaliacao}[2026/08/15 Avaliacao LaTeXclass v1.01 for LuaLaTeX
+\ProvidesClass{avaliacao}[2026/08/15 Avaliacao LaTeXclass v1.02 for LuaLaTeX
 ^^JCreated by Bernhard Enders]
 
 \newif\if@twocols\@twocolsfalse
@@ -199,7 +199,8 @@
       colback=mygray, arc=8pt, outer arc=8pt,
       left=1pt, right=1pt, top=2pt, bottom=2pt,
       boxrule=0.5pt, width=\linewidth,
-      colframe=black
+      colframe=black,
+      before upper={\sloppy}
     ]%
     {\centering\bfseries INSTRUÇÕES\par}
     \begin{itemize}[leftmargin=*]
@@ -288,15 +289,53 @@
 \newenvironment{subitens}{%
     \begin{enumerate}[align=left,leftmargin=*,widest=a,label=(\alph{enumi})]}{\end{enumerate}}
 
-\newenvironment{obs}[1]{%
+\newenvironment{obs}{%
   \begin{tcolorbox}[colback=mygray,arc=0pt,outer arc=0pt, left=1pt,right=1pt,top=2pt,bottom=2pt,%
-      boxrule=0pt,bottomrule=0.75pt,toprule=0.75pt,boxsep=1ex,width=\linewidth]%
-#1}{\end{tcolorbox}\medskip}
+      boxrule=0pt,bottomrule=0.75pt,toprule=0.75pt,boxsep=1ex,width=\linewidth,
+      before upper={\sloppy}]%
+}{\end{tcolorbox}\medskip}
 
 \providecommand*{\valor}[2]{#1\,\ensuremath{\mathrm{#2}}}
 \providecommand*{\unidade}[1]{\ensuremath{\,\mathrm{#1}}}
 \providecommand{\outracoluna}{\vfill\columnbreak}
 
 \DeclareMathOperator{\sen}{sen}
+
+% -----------------------------------------------------
+% Hyperlinks: load late so the preamble can still pass options.
+% \href{url} prints the URL; \href{url}{text} keeps hyperref's two-arg form.
+% -----------------------------------------------------
+\makeatletter
+\def\avaliacao@href@graburl#{%
+  \hyper@normalise\avaliacao@href@afterurl
+}
+\def\avaliacao@href@afterurl#1{%
+  \@ifnextchar\bgroup
+    {\href@{#1}}%
+    {\href@{#1}{\nolinkurl{#1}}}%
+}
+\def\avaliacao@patch@href{%
+  \DeclareRobustCommand*{\href}[1][]{%
+    \begingroup
+    \setkeys{href}{##1}%
+    \@ifnextchar\bgroup\avaliacao@href@graburl{\hyper@normalise\href@}%
+  }%
+}
+\AtEndPreamble{%
+  \@ifpackageloaded{hyperref}{}{%
+    \RequirePackage{hyperref}%
+    \hypersetup{
+      colorlinks=true,
+      urlcolor=blue,
+      linkcolor=black,
+      citecolor=black,
+      filecolor=blue,
+    }%
+  }%
+  \@ifpackageloaded{xurl}{}{\RequirePackage{xurl}}%
+  \urlstyle{same}%
+  \avaliacao@patch@href
+}
+\makeatother
 
 \endinput

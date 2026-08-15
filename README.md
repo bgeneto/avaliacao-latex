@@ -63,6 +63,7 @@ Logo padrão: `logo_unb_vert` (arquivo de imagem no caminho de busca). Redefina 
 - `subitens` — itens (a), (b), …
 - `obs` — texto compartilhado entre questões
 - `\valor{80}{km/h}`, `\unidade{m/s}` — grandezas com unidade em romano
+- `\href{url}` ou `\href{url}{texto}`, `\url{url}` — links (a classe carrega `hyperref`)
 
 Há aliases em português e inglês para o cabeçalho (`\universidade`/`\university`, `\disciplina`/`\course`, …).
 
