@@ -281,16 +281,20 @@
 % Institutional header (full width; does not start columns)
 % -----------------------------------------------------
 \ExplSyntaxOn
+\box_new:N \l_avaliacao_qr_box
 \cs_new_protected:Npn \avaliacao@qrcell
 {
   \tl_if_empty:NF \g_avaliacao_qrcode_tl
   {
-    \raisebox { 0.8ex - \height } [ 0pt ] [ 0pt ]
+    \hbox_set:Nn \l_avaliacao_qr_box
     {
       \includegraphics
-        [ width = 2.6cm, height = 2.6cm, keepaspectratio ]
+        [ width = 2.7cm, height = 2.7cm, keepaspectratio ]
         { \avaliacao@qrcode }
     }
+% Zero-size raisebox so the image fills the Nota square without stretching rows.
+    \raisebox { \dim_eval:n { 0.8ex - \box_ht:N \l_avaliacao_qr_box } } [ 0pt ] [ 0pt ]
+    { \box_use:N \l_avaliacao_qr_box }
   }
 }
 \cs_new_protected:Npn \avaliacao@notalabel
