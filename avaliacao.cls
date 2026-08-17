@@ -289,10 +289,10 @@
     \hbox_set:Nn \l_avaliacao_qr_box
     {
       \includegraphics
-        [ width = 2.7cm, height = 2.7cm, keepaspectratio ]
-        { \avaliacao@qrcode }
+      [ width = 2.7cm, height = 2.7cm, keepaspectratio ]
+      { \avaliacao@qrcode }
     }
-% Zero-size raisebox so the image fills the Nota square without stretching rows.
+    % Zero-size raisebox so the image fills the Nota square without stretching rows.
     \raisebox { \dim_eval:n { 0.8ex - \box_ht:N \l_avaliacao_qr_box } } [ 0pt ] [ 0pt ]
     { \box_use:N \l_avaliacao_qr_box }
   }
@@ -318,7 +318,7 @@
                                                                                                \textit{Assunto:}    & \avaliacao@subject\space (\avaliacao@shift)  \\%
                                                                                                \textit{Professor:}  & \avaliacao@prof                              \\%
                                                                                              \end{tabular} &
-        \avaliacao@notalabel                                                                                                                                    \\\hline
+        \avaliacao@notalabel                                                                                                                                                        \\\hline
       \end{tabularx}\par
     }%
     {\scriptsize
