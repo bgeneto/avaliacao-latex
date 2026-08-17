@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}[2022/06/01]
-\ProvidesClass{avaliacao}[2026/08/15 v1.13 Avaliacao class for LuaLaTeX
+\ProvidesClass{avaliacao}[2026/08/17 v1.14 Avaliacao class for LuaLaTeX
   ^^JCreated by bgeneto]
 
 % -----------------------------------------------------
@@ -154,6 +154,7 @@
 % -----------------------------------------------------
 \ExplSyntaxOn
 \tl_new:N \g_avaliacao_logo_tl
+\tl_new:N \g_avaliacao_qrcode_tl
 \tl_new:N \g_avaliacao_univ_tl
 \tl_new:N \g_avaliacao_facul_tl
 \tl_new:N \g_avaliacao_major_tl
@@ -182,6 +183,7 @@
 
 % Expandable from document-level (catcodes frozen here)
 \cs_new:Npn \avaliacao@logo { \g_avaliacao_logo_tl }
+\cs_new:Npn \avaliacao@qrcode { \g_avaliacao_qrcode_tl }
 \cs_new:Npn \avaliacao@univ { \g_avaliacao_univ_tl }
 \cs_new:Npn \avaliacao@facul { \g_avaliacao_facul_tl }
 \cs_new:Npn \avaliacao@major { \g_avaliacao_major_tl }
@@ -193,6 +195,8 @@
 
 \NewDocumentCommand { \logo } { m }
 { \tl_gset:Nn \g_avaliacao_logo_tl {#1} }
+\NewDocumentCommand { \qrcode } { m }
+{ \tl_gset:Nn \g_avaliacao_qrcode_tl {#1} }
 \NewDocumentCommand { \university } { m }
 { \tl_gset:Nn \g_avaliacao_univ_tl {#1} }
 \NewDocumentCommand { \faculty } { m }
@@ -276,13 +280,33 @@
 % -----------------------------------------------------
 % Institutional header (full width; does not start columns)
 % -----------------------------------------------------
+\ExplSyntaxOn
+\cs_new_protected:Npn \avaliacao@qrcell
+{
+  \tl_if_empty:NF \g_avaliacao_qrcode_tl
+  {
+    \raisebox { 0.8ex - \height } [ 0pt ] [ 0pt ]
+    {
+      \includegraphics
+        [ width = 2.6cm, height = 2.6cm, keepaspectratio ]
+        { \avaliacao@qrcode }
+    }
+  }
+}
+\cs_new_protected:Npn \avaliacao@notalabel
+{
+  \tl_if_empty:NT \g_avaliacao_qrcode_tl
+  { \footnotesize \textcolor { lightgray } { Nota } }
+}
+\ExplSyntaxOff
+
 \NewDocumentCommand{\header}{}{%
   {\sffamily
       \noindent
       \begin{tabularx}{\textwidth}{cX|C|}%
         \cline{3-3}%
         \multirow{6}{*}{\parbox[t]{3.2cm}{\includegraphics[width=2.8cm]{\avaliacao@logo}}} &
-        \Large{\avaliacao@univ}                                                            &                                                                                        \\%
+        \Large{\avaliacao@univ}                                                            & \avaliacao@qrcell                                                                      \\%
                                                                                            & \large{\avaliacao@facul}                                                             & \\%
                                                                                            & \begin{tabular}[b]{@{}ll}%
                                                                                                \textit{Curso:}      & \avaliacao@major                             \\%
@@ -290,7 +314,7 @@
                                                                                                \textit{Assunto:}    & \avaliacao@subject\space (\avaliacao@shift)  \\%
                                                                                                \textit{Professor:}  & \avaliacao@prof                              \\%
                                                                                              \end{tabular} &
-        \footnotesize\textcolor{lightgray}{Nota}                                                                                                                                    \\\hline
+        \avaliacao@notalabel                                                                                                                                    \\\hline
       \end{tabularx}\par
     }%
     {\scriptsize

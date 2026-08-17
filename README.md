@@ -61,6 +61,8 @@ Coloque `avaliacao.cls` (e o logo, se usar um arquivo próprio) no mesmo diretó
 
 Logo padrão: `logo_unb_vert` (arquivo de imagem no caminho de busca). Redefina com `\logo{arquivo}`.
 
+QR opcional no lugar do quadro “Nota”: `\qrcode{arquivo.png}` **antes** de `\header`. Sem esse comando, o quadro de nota permanece.
+
 ## Fontes
 
 A classe carrega **Linux Libertine** por padrão. Para usar outra fonte OpenType do TeX Live ou do sistema, chame `\fonte` (ou `\examfont`) **depois** de `\documentclass`, ou passe a opção `font`:
@@ -141,6 +143,7 @@ Se a questão tem `\qitem`, **não** use o argumento opcional de `questao` (`[4/
 - `\valor{80}{km/h}`, `\unidade{m/s}` — grandezas com unidade em romano
 - `\href{url}` ou `\href{url}{texto}`, `\url{url}` — links (a classe carrega `hyperref`)
 - `\fonte{Nome}` / `\examfont{Nome}` — troca a fonte do texto; `\fonte*` também a sem serifa
+- `\qrcode{arquivo}` — no cabeçalho, substitui o quadro “Nota” pela imagem (antes de `\header`)
 
 Há aliases em português e inglês para o cabeçalho (`\universidade`/`\university`, `\disciplina`/`\course`, …).
 
